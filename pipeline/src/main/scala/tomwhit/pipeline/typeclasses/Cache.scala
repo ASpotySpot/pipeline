@@ -1,4 +1,4 @@
-package tomwhit.pipeline
+package tomwhit.pipeline.typeclasses
 
 import monix.eval.Task
 

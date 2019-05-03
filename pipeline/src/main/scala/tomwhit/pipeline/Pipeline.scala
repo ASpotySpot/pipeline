@@ -1,13 +1,13 @@
-package tomwhit
+package tomwhit.pipeline
 
 import cats.data.{IndexedStateT, StateT}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.{Applicative, Monad, Parallel}
-import shapeless.{::, HList, HNil}
 import shapeless.ops.hlist.{Prepend, SelectAll, Selector, Tupler}
-import tomwhit.pipeline.Cache._
-import tomwhit.pipeline.Component
+import shapeless.{::, HList, HNil}
+import tomwhit.pipeline.typeclasses.{Cache, Producter, Threader}
+import tomwhit.pipeline.typeclasses.Cache._
 
 class Pipeline[F[_], G[_], T <: HList, H] private(private val ids: IndexedStateT[F, HNil, T, F[H]])(implicit Par: Parallel[F, G], C: Cache[F]) {
   self =>

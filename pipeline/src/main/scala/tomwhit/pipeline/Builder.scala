@@ -4,6 +4,7 @@ import cats.instances.{OptionInstances, OptionInstancesBinCompat0}
 import cats.{Applicative, Monad, Parallel}
 import shapeless.HNil
 import shapeless.ops.hlist.Selector
+import tomwhit.pipeline.typeclasses.{Cache, ThreaderInstances}
 
 abstract class Builder[F[_], G[_]](implicit Par: Parallel[F, G], C: Cache[F]) extends BuilderImplicits {
   implicit val M: Monad[F] = Par.monad
