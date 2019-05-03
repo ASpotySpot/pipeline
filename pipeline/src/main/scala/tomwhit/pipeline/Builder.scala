@@ -10,7 +10,7 @@ abstract class Builder[F[_], G[_]](implicit Par: Parallel[F, G], C: Cache[F]) ex
   implicit val M: Monad[F] = Par.monad
   implicit val G: Applicative[G] = Par.applicative
 
-  protected def pipeline: Pipeline[F, G, HNil, HNil] = Pipeline[F, G]
+  protected def pipeline: Pipeline[F, G, HNil, HNil, HNil] = Pipeline[F, G]
 }
 
 trait BuilderImplicits
