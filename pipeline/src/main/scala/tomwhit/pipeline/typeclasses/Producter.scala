@@ -1,4 +1,4 @@
-package tomwhit.pipeline
+package tomwhit.pipeline.shapeless
 
 import cats.{Monad, Parallel}
 import shapeless.{::, DepFn1, HList, HNil}
