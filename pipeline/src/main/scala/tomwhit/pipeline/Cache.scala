@@ -1,4 +1,4 @@
-package tomw.pipeline
+package tomwhit.pipeline
 
 import monix.eval.Task
 

@@ -1,4 +1,4 @@
-package tomw.pipeline
+package tomwhit.pipeline
 
 import cats.syntax.flatMap._
 import cats.syntax.functor._

@@ -1,10 +1,10 @@
-package tomw.pipeline
+package tomwhit.pipeline
 
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.{Applicative, Monad, Traverse}
 import shapeless.{::, DepFn1, HList, HNil, Lazy}
-import tomw.pipeline.Threader.Aux
+import tomwhit.pipeline.Threader.Aux
 
 trait Threader[F[_], G[_], L] extends DepFn1[G[L]] with Serializable {self =>
   type Out <: HList

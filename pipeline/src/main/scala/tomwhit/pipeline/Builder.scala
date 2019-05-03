@@ -1,4 +1,4 @@
-package tomw.pipeline
+package tomwhit.pipeline
 
 import cats.instances.{OptionInstances, OptionInstancesBinCompat0}
 import cats.{Applicative, Monad, Parallel}

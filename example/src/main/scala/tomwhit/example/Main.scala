@@ -1,10 +1,10 @@
-package tomw.example
+package tomwhit.example
 
 import monix.eval.Task
 import monix.eval.instances.CatsParallelForTask
 import shapeless.{::, HNil}
 import monix.execution.Scheduler.Implicits.global
-import tomw.example.ExampleComponents.{C, Conf, Written, Z}
+import tomwhit.example.ExampleComponents.{C, Conf, Written, Z}
 
 object Main {
   def main(args: Array[String]): Unit = {

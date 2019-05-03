@@ -1,11 +1,26 @@
-organization := "tomwhit"
-name := "pipeline"
-version := "0.1-SNAPSHOT"
+lazy val commonSettings = Seq(
+  libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.3",
+  libraryDependencies += "io.monix" %% "monix" % "3.0.0-RC2",
+  organization := "tomwhit",
+  version := "0.1-SNAPSHOT",
+  crossScalaVersions := Seq("2.11.12", "2.12.8")
+)
 
-crossScalaVersions := Seq("2.11.12", "2.12.8")
+lazy val core = (project in file("pipeline")).
+  settings(
+    name := "pipeline",
+    commonSettings
+  )
 
-libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.3"
-libraryDependencies += "io.monix" %% "monix" % "3.0.0-RC2"
+lazy val example = (project in file("example")).
+  dependsOn(core).
+  settings(
+    name := "example",
+    commonSettings
+  )
+
+lazy val root = (project in file(".")).
+  aggregate(core, example)
 
 
 scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {

@@ -1,8 +1,8 @@
-package tomw.example
+package tomwhit.example
 
 import cats.Monad
 import shapeless.HNil
-import tomw.pipeline.Component
+import tomwhit.pipeline.Component
 import cats.syntax.flatMap._
 
 object ExampleComponents {

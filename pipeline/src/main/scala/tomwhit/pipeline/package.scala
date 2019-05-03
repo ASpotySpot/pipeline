@@ -1,4 +1,4 @@
-package tomw
+package tomwhit
 
 import cats.data.{IndexedStateT, StateT}
 import cats.syntax.flatMap._
@@ -6,7 +6,7 @@ import cats.syntax.functor._
 import cats.{Applicative, Monad, Parallel}
 import shapeless.{::, HList, HNil}
 import shapeless.ops.hlist.{Prepend, Selector, SelectAll, Tupler}
-import tomw.pipeline.Cache._
+import tomwhit.pipeline.Cache._
 
 package pipeline {
 

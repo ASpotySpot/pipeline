@@ -1,8 +1,8 @@
-package tomw.example
+package tomwhit.example
 
 import cats.Parallel
-import tomw.example.ExampleComponents._
-import tomw.pipeline.{Builder, Cache}
+import tomwhit.example.ExampleComponents._
+import tomwhit.pipeline.{Builder, Cache}
 
 class ExamplePipeline[F[_], G[_]](c: Conf)(implicit P: Parallel[F, G], Ca: Cache[F]) extends Builder[F, G] {
 
