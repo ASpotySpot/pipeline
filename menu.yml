@@ -9,3 +9,6 @@ options:
 
   - title: Abstractions
     url: docs/abstractions.html
+
+  - title: Composition
+    url: docs/composition.html
