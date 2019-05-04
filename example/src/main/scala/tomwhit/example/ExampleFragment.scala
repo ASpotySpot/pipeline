@@ -1,14 +1,19 @@
 package tomwhit.example
 
 import cats.Parallel
-import shapeless.{HNil, ::}
+import shapeless.{::, HNil}
 import tomwhit.example.ExampleComponents._
 import tomwhit.pipeline.Builder
 import tomwhit.pipeline.typeclasses.Cache
 
-class ExamplePipeline[F[_], G[_]](c: Conf)(implicit P: Parallel[F, G], Ca: Cache[F]) extends Builder[F, G] {
+class ExampleFragment[F[_], G[_]](c: Conf)(implicit P: Parallel[F, G], Ca: Cache[F]) extends Builder[F, G] {
 
   def build = {
+    val joiner = fragment[F[C] :: F[Y] :: HNil].
+      joinF[C, Y].
+      component(CYToZ()).
+      component(Write[F, Z]).
+      onlyIf(c.writeZ)
 
     val makeC = {
       pipeline.
@@ -29,13 +34,8 @@ class ExamplePipeline[F[_], G[_]](c: Conf)(implicit P: Parallel[F, G], Ca: Cache
         getOrElse(Read(Y("Reading Y")))
     }
 
-    pipeline.
-      pipeline(makeC).
-      pipeline(makeY).
-      joinF[C, Y].
-      component(CYToZ()).
-      component(Write[F, Z]).
-      onlyIf(c.writeZ)
+    val cy = makeC.joinDep(makeY)
+    joiner.prepend(cy)
   }
 }
 
