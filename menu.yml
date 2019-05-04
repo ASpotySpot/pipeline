@@ -2,6 +2,8 @@ options:
   - tile: Home
     url: index.md
 
+  - title: Docs
+    url: docs/docs.html
   - title: Example
     url: docs/example.html
 
