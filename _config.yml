@@ -1,0 +1,11 @@
+name: Pipeline
+baseurl: ''
+description: Scala Pipeline DSL
+highlighter: rouge
+docs: true
+collections:
+  tut:
+    output: true
+version: 0.1-SNAPSHOT
+org: tomwhit
+markdown: kramdown
