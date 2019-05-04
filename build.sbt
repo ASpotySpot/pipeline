@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.3",
-  libraryDependencies += "io.monix" %% "monix" % "3.0.0-RC2",
+  libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0",
   organization := "tomwhit",
   version := "0.1-SNAPSHOT",
   crossScalaVersions := Seq("2.11.12", "2.12.8")
@@ -9,14 +9,15 @@ lazy val commonSettings = Seq(
 lazy val core = (project in file("pipeline")).
   settings(
     name := "pipeline",
-    commonSettings
+    commonSettings,
   )
 
 lazy val example = (project in file("example")).
   dependsOn(core).
   settings(
     name := "example",
-    commonSettings
+    commonSettings,
+    libraryDependencies += "io.monix" %% "monix" % "3.0.0-RC2",
   )
 
 lazy val root = (project in file(".")).
