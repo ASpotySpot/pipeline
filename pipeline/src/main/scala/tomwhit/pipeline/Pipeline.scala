@@ -3,14 +3,14 @@ package tomwhit.pipeline
 import cats.data.{IndexedStateT, StateT}
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.{Applicative, Monad, Parallel}
+import cats.{Applicative, FlatMap, Functor, Monad, Parallel}
 import shapeless.ops.hlist.{Prepend, SelectAll, Selector, Tupler}
 import shapeless.{::, HList, HNil}
 import tomwhit.pipeline.typeclasses.{Cache, HNilFiller, Producter, Threader}
 import tomwhit.pipeline.typeclasses.Cache._
 import tomwhit.pipeline.Pipeline._
 
-class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: IndexedStateT[F, Q, T, F[H]])(implicit Par: Parallel[F, G], C: Cache[F]) {
+class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: IndexedStateT[F, Q, T, F[H]])(implicit Par: Parallel[F, G]) {
   self =>
 
   //Instances
@@ -21,39 +21,35 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
   //Basic Constructors
   def from[S <: HList, A](newIds: IndexedStateT[F, Q, S, F[A]]): Aux[S, A] = new Pipeline[F, G, Q, S, A](newIds)
   def transform[S <: HList, A](f: (T, F[H]) => (S, F[A])): Aux[S, A] = {
-    val newIds = self.ids.transform { case (t, fh) =>
-      val (s, fa) = f(t, fh)
-      (s, fa.memoize)
-    }
+    val newIds = self.ids.transform { case (t, fh) => f(t, fh) }
     from(newIds)
   }
-
+  def transformS[S <: HList, A](f: T => (S, F[A])): Aux[S, A] = {
+    transform[S, A]{case (t, _) => f(t)}
+  }
+  def inspect[A](f: T => F[A]): Aux[T, A] = transform{case (t, _) => (t, f(t))}
   //Basic Transforms
-  def put: Aux[F[H] :: T, H] = transform { case (s, fa) => (fa :: s, fa) }
-  def retrieve[B](implicit S: Selector[T, F[B]]): Aux[T, B] = transform { case (s, _) => (s, S(s)) }
+  def put(implicit C: Cache[F]): Aux[F[H] :: T, H] = transform{ case (s, fa) =>
+    val cached = fa.memoize
+    (cached :: s, cached)
+  }
+  def retrieve[B](implicit S: Selector[T, F[B]]): Aux[T, B] = inspect(s => S(s))
   def refine[S <: HList](implicit S: SelectAll[T, S]): Aux[S.Out, H] = transform { case (t, fh) => (S(t), fh) }
 
   def map[B](f: H => B): Aux[T, B] = transform { case (s, fa) => (s, fa.map(f))}
-  def mapP[B](f: H => B): Aux[F[B] :: T, B] = transform { case (s, fa) =>
-    val fb = fa.map(f)
-    (fb :: s, fb)
-  }
+  def mapP[B](f: H => B)(implicit C: Cache[F]): Aux[F[B] :: T, B] = map(f).put
 
   def flatMap[B](f: H => F[B]): Aux[T, B] = transform { case (s, fa) => (s, fa.flatMap(f)) }
-  def flatMapP[B](f: H => F[B]): Aux[F[B] :: T, B] = transform { case (s, fa) =>
-    val fb = fa.flatMap(f)
-    (fb :: s, fb)
-  }
+  def flatMapP[B](f: H => F[B])(implicit C: Cache[F]): Aux[F[B] :: T, B] = flatMap(f).put
 
-  def add[B](b: B): Aux[F[B] :: T, B] = addF(M.pure(b))
-  def addF[B](fb: F[B]): Aux[F[B] :: T, B] = transform { case (s, _) =>
-    (fb :: s, fb)
-  }
+  def add[B](b: B)(implicit C: Cache[F]): Aux[F[B] :: T, B] = addF(M.pure(b))
+  def addF[B](fb: F[B])(implicit C: Cache[F]): Aux[F[B] :: T, B] = flatMapP(_ => fb)
 
   //Component & Pipeline Methods
-  def component[X, B](c: Component[F, X, B])(implicit S: Selector[T, F[X]]): Aux[F[B] :: T, B] = retrieve(S).flatMapP(x => c.apply(x))
-
-  def pipelineDiscard[B](p2: Aux[_ <: HList, B])(implicit ev: HNil =:= Q): Aux[F[B] :: T, B] = {
+  def component[X, B](c: Component[F, X, B])(implicit S: Selector[T, F[X]], C: Cache[F]): Aux[F[B] :: T, B] = {
+    retrieve(S).flatMapP(x => c.apply(x))
+  }
+  def pipelineDiscard[B](p2: Aux[_ <: HList, B])(implicit ev: HNil =:= Q, C: Cache[F]): Aux[F[B] :: T, B] = {
     addF(p2.ids.runA(HNil).flatten)
   }
 
@@ -85,6 +81,7 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
 
   //Combinators
   def joinF[B1, B2](implicit
+                    C: Cache[F],
                     S: SelectAll[T, F[B1] :: F[B2] :: HNil],
                     T: Tupler.Aux[F[B1] :: F[B2] :: HNil, (F[B1], F[B2])]): Aux[F[(B1, B2)] :: T, (B1, B2)] = {
     transform[T, (B1, B2)] { case (s, _) =>
@@ -113,7 +110,9 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
 
 
   //Conditional Operators
-  def getOrElse[X, B](c: Component[F, HNil, B])(implicit S: Selector[T, F[Option[B]]]): Aux[F[B] :: T, B] = retrieve(S).flatMapP {
+  def getOrElse[X, B](c: Component[F, HNil, B])(implicit
+                                                S: Selector[T, F[Option[B]]],
+                                                C: Cache[F]): Aux[F[B] :: T, B] = retrieve(S).flatMapP {
     case Some(b) => M.pure(b)
     case None => c()
   }
@@ -133,9 +132,14 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
 
 
 object Pipeline {
-  private[pipeline] def apply[F[_], G[_], Q <: HList](implicit P: Parallel[F, G], C: Cache[F]): Pipeline[F, G, Q, Q, HNil] =
+  private[pipeline] def apply[F[_], G[_], Q <: HList](implicit P: Parallel[F, G]): Pipeline[F, G, Q, Q, HNil] =
     new Pipeline[F, G, Q, Q, HNil](StateT.pure[F, Q, F[HNil]](P.monad.pure(HNil))(P.monad))
 
+
+
+  implicit def functor[F[_], G[_], Q <: HList, T <: HList](implicit F: Functor[F]) = new Functor[Pipeline[F, G, Q, T, ?]] {
+    override def map[A, B](fa: Pipeline[F, G, Q, T, A])(f: A => B): Pipeline[F, G, Q, T, B] = fa.map(f)
+  }
 
   implicit class RichIndexedState[F[_], SA, SB, A](idx: IndexedStateT[F, SA, SB, A]) {
     def liftTransform[B, SC](f: (SB, A) => F[(SC, B)])(implicit F: Monad[F]): IndexedStateT[F, SA, SC, B] = {

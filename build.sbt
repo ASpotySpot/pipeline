@@ -4,6 +4,7 @@ lazy val commonSettings = Seq(
   organization := "tomwhit",
   version := "0.1-SNAPSHOT",
   crossScalaVersions := Seq("2.11.12", "2.12.8"),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.10.0")
 ) ++ micrositeSettings
 
 lazy val core = (project in file("pipeline")).
@@ -36,6 +37,8 @@ lazy val micrositeSettings = Seq(
   micrositeDocumentationLabelDescription := "Documentation",
   micrositeAuthor := "aspotyspot / Thomas Whitaker",
   micrositeHomepage := "https://aspotyspot.github.io/pipeline/",
+  micrositeBaseUrl := "/pipeline",
+  micrositeDocumentationUrl := "/pipeline/docs",
   micrositeGithubOwner := "aspotyspot",
   micrositeGithubRepo := "pipeline",
   micrositeGitterChannel := false,
@@ -43,7 +46,8 @@ lazy val micrositeSettings = Seq(
   micrositePushSiteWith := GitHub4s,
   micrositeGithubToken := Option(System.getenv("GITHUB_TOKEN")),
   micrositeDataDirectory := file("docs") / "menu.yml",
-  micrositeCompilingDocsTool := WithMdoc
+  micrositeCompilingDocsTool := WithMdoc,
+  git.remoteRepo := "git@github.com:aspotyspot/pipeline.git"
 )
 val scalac211Flags = Seq(
   "-deprecation",

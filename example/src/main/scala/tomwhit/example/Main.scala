@@ -4,7 +4,7 @@ import monix.eval.Task
 import monix.eval.instances.CatsParallelForTask
 import shapeless.{::, HNil}
 import monix.execution.Scheduler.Implicits.global
-import tomwhit.example.ExampleComponents.{C, Conf, Written, Z}
+import tomwhit.example.ExampleComponents._
 import tomwhit.pipeline.typeclasses.Cache
 import tomwhit.pipeline.typeclasses.HNilFiller._
 
@@ -17,6 +17,8 @@ object Main {
   }
 
   implicit val taskCache: Cache[Task] = new Cache[Task] {
-    override def memoize[A](fa: Task[A]): Task[A] = fa.memoize
+    override def memoize[A](fa: Task[A]): Task[A] = {
+      fa.memoize
+    }
   }
 }

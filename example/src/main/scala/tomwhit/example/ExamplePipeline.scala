@@ -52,8 +52,7 @@ class ExamplePipeline[F[_], G[_]](c: Conf)(implicit P: PipelineContext[F, G]) ex
       pipeline(makeY).
       joinF[C, Y].
       component(CYToZ()).
-      component(Write[F, Z]).
-      onlyIf(c.writeZ)
+      component(Write[F, Z].onlyIf(c.writeZ))
   }
 }
 

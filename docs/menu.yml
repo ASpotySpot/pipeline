@@ -2,8 +2,13 @@ options:
   - tile: Home
     url: index.md
 
+  - title: Docs
+    url: docs/docs.html
   - title: Example
     url: docs/example.html
 
   - title: Abstractions
     url: docs/abstractions.html
+
+  - title: Composition
+    url: docs/composition.html
