@@ -1,5 +1,5 @@
 name: Pipeline
-baseurl: ''
+baseurl: /pipeline
 description: Scala Pipeline DSL
 highlighter: rouge
 docs: true
