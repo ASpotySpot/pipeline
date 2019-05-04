@@ -1,5 +1,12 @@
-package tomwhit.example
+---
+layout: docs
+title:  "Example"
+section: "docs"
+---
 
+### Example
+
+```scala mdoc
 import tomwhit.example.ExampleComponents._
 import tomwhit.pipeline.builder._
 
@@ -56,4 +63,4 @@ class ExamplePipeline[F[_], G[_]](c: Conf)(implicit P: PipelineContext[F, G]) ex
       onlyIf(c.writeZ)
   }
 }
-
+```

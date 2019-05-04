@@ -3,7 +3,7 @@ package tomwhit.example
 import cats.Parallel
 import shapeless.{::, HNil}
 import tomwhit.example.ExampleComponents._
-import tomwhit.pipeline.Builder
+import tomwhit.pipeline.builder.Builder
 import tomwhit.pipeline.typeclasses.Cache
 
 class ExampleFragment[F[_], G[_]](c: Conf)(implicit P: Parallel[F, G], Ca: Cache[F]) extends Builder[F, G] {

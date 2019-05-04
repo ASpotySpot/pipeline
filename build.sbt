@@ -3,8 +3,8 @@ lazy val commonSettings = Seq(
   libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0",
   organization := "tomwhit",
   version := "0.1-SNAPSHOT",
-  crossScalaVersions := Seq("2.11.12", "2.12.8")
-)
+  crossScalaVersions := Seq("2.11.12", "2.12.8"),
+) ++ micrositeSettings
 
 lazy val core = (project in file("pipeline")).
   settings(
@@ -13,6 +13,7 @@ lazy val core = (project in file("pipeline")).
   )
 
 lazy val example = (project in file("example")).
+  enablePlugins(MicrositesPlugin).
   dependsOn(core).
   settings(
     name := "example",
@@ -29,6 +30,21 @@ scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
   case Some((2, 11)) => scalac211Flags
 })
 
+lazy val micrositeSettings = Seq(
+  micrositeName := "Pipeline",
+  micrositeDescription := "Scala Pipeline DSL",
+  micrositeDocumentationLabelDescription := "Documentation",
+  micrositeAuthor := "aspotyspot / Thomas Whitaker",
+  micrositeHomepage := "https://aspotyspot.github.io/pipeline/",
+  micrositeGithubOwner := "aspotyspot",
+  micrositeGithubRepo := "pipeline",
+  micrositeGitterChannel := false,
+  micrositeShareOnSocial := false,
+  micrositePushSiteWith := GitHub4s,
+  micrositeGithubToken := Option(System.getenv("GITHUB_TOKEN")),
+  micrositeDataDirectory := file("docs") / "menu.yml",
+  micrositeCompilingDocsTool := WithMdoc
+)
 val scalac211Flags = Seq(
   "-deprecation",
   "-encoding", "UTF-8", // yes, this is 2 args
