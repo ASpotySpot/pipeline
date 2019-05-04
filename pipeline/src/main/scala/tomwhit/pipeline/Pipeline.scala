@@ -6,8 +6,9 @@ import cats.syntax.functor._
 import cats.{Applicative, Monad, Parallel}
 import shapeless.ops.hlist.{Prepend, SelectAll, Selector, Tupler}
 import shapeless.{::, HList, HNil}
-import tomwhit.pipeline.typeclasses.{Cache, Producter, Threader}
+import tomwhit.pipeline.typeclasses.{Cache, HNilFiller, Producter, Threader}
 import tomwhit.pipeline.typeclasses.Cache._
+import tomwhit.pipeline.Pipeline._
 
 class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: IndexedStateT[F, Q, T, F[H]])(implicit Par: Parallel[F, G], C: Cache[F]) {
   self =>
@@ -49,12 +50,32 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
     (fb :: s, fb)
   }
 
-
   //Component & Pipeline Methods
   def component[X, B](c: Component[F, X, B])(implicit S: Selector[T, F[X]]): Aux[F[B] :: T, B] = retrieve(S).flatMapP(x => c.apply(x))
 
   def pipelineDiscard[B](p2: Aux[_ <: HList, B])(implicit ev: HNil =:= Q): Aux[F[B] :: T, B] = {
     addF(p2.ids.runA(HNil).flatten)
+  }
+
+  def prepend[Q2 <: HList, T2 <: HList](p2: Pipeline[F, G, Q2, T2, _])(implicit
+                                                                       S: SelectAll[T2, Q],
+                                                                       Pre: Prepend[T2, T]): Pipeline[F, G, Q2, Pre.Out, H] = {
+    val newState: IndexedStateT[F, Q2, Pre.Out, F[H]] = p2.ids.liftTransform[F[H], Pre.Out]{(t2, fq) =>
+      fq.flatMap{_ =>
+        ids.run(S(t2)).map{case (t, fh) => (Pre.apply(t2, t), fh)}
+      }
+    }
+    new Pipeline[F, G, Q2, Pre.Out, H](newState)
+  }
+
+  def joinDep[Q2 <: HList, T2 <: HList, B](p2: Pipeline[F, G, Q2, T2, B])(implicit
+                                                                          Pre: Prepend[T2, T]): Pipeline[F, G, Q2 :: Q, Pre.Out, (B, H)] = {
+    val newState: IndexedStateT[F, Q2 :: Q, Pre.Out, F[(B, H)]] = IndexedStateT.apply[F, Q2 :: Q, Pre.Out, F[(B,  H)]]{q2q =>
+      val p2F = p2.ids.run(q2q.head)
+      val p1F = ids.run(q2q.tail)
+      Parallel.parMap2(p2F, p1F){case ((t2, fb), (t, fh)) => (Pre.apply(t2, t), Parallel.parProduct(fb, fh))}
+    }
+    new Pipeline[F, G, Q2 :: Q, Pre.Out, (B, H)](newState)
   }
 
   def pipeline[T2 <: HList, B](p2: Aux[T2, B])(implicit ev: HNil =:= Q, Pre: Prepend[T2, T]): Aux[F[B] :: Pre.Out, B] = {
@@ -74,16 +95,19 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
   }
 
   //Evaluators
-  def eval[L](implicit ev: HNil =:= Q, S: Selector[T, F[L]]): F[L] = {
-    ids.transform { case (t, _) => ((), S(t)) }.runA(HNil).flatten
+  def eval[L]()(implicit hnf: HNilFiller.Aux[Q], S: Selector[T, F[L]]): F[L] = eval2[L](hnf.apply())
+  def eval2[L](q: Q)(implicit S: Selector[T, F[L]]): F[L] = {
+    ids.transform { case (t, _) => ((), S(t)) }.runA(q).flatten
   }
-  def complete(implicit ev: HNil =:= Q): F[T] = ids.runS(HNil)
+  def complete()(implicit ev: HNil =:= Q): F[T] = complete(HNil)
+  def complete(q: Q): F[T] = ids.runS(q)
 
-  class EvalManyHelper[L <: HList](implicit S: SelectAll[T, L], ev: HNil =:= Q) {
-    def get(implicit P: Producter[F, L]): P.Out = ids.runS(HNil).map(S.apply).flatMap(t => P(t))
+  class EvalManyHelper[L <: HList](implicit S: SelectAll[T, L]) {
+    def get(q: Q)(implicit P: Producter[F, L]): P.Out = ids.runS(q).map(S.apply).flatMap(t => P(t))
+    def get()(implicit hnf: HNilFiller.Aux[Q], P: Producter[F, L]): P.Out = get(hnf.apply())
   }
 
-  def evalMany[L <: HList](implicit S: SelectAll[T, L], ev: HNil =:= Q): EvalManyHelper[S.Out] = {
+  def evalMany[L <: HList](implicit hnf: HNilFiller.Aux[Q], S: SelectAll[T, L]): EvalManyHelper[S.Out] = {
     new EvalManyHelper[S.Out]
   }
 
@@ -109,7 +133,20 @@ class Pipeline[F[_], G[_], Q <: HList, T <: HList, H] private(private val ids: I
 
 
 object Pipeline {
-  private[pipeline] def apply[F[_], G[_]](implicit P: Parallel[F, G], C: Cache[F]): Pipeline[F, G, HNil, HNil, HNil] =
-    new Pipeline[F, G, HNil, HNil, HNil](StateT.pure[F, HNil, F[HNil]](P.monad.pure(HNil))(P.monad))
+  private[pipeline] def apply[F[_], G[_], Q <: HList](implicit P: Parallel[F, G], C: Cache[F]): Pipeline[F, G, Q, Q, HNil] =
+    new Pipeline[F, G, Q, Q, HNil](StateT.pure[F, Q, F[HNil]](P.monad.pure(HNil))(P.monad))
+
+
+  implicit class RichIndexedState[F[_], SA, SB, A](idx: IndexedStateT[F, SA, SB, A]) {
+    def liftTransform[B, SC](f: (SB, A) => F[(SC, B)])(implicit F: Monad[F]): IndexedStateT[F, SA, SC, B] = {
+      IndexedStateT.applyF(
+        F.map(idx.runF){sfsa =>
+          sfsa.andThen {fsa =>
+            F.flatMap(fsa) {case (s, a) => f(s, a)}
+          }
+        }
+      )
+    }
+  }
 }
 

@@ -5,6 +5,7 @@ import monix.eval.instances.CatsParallelForTask
 import shapeless.{::, HNil}
 import monix.execution.Scheduler.Implicits.global
 import tomwhit.example.ExampleComponents.{C, Conf, Written, Z}
+import tomwhit.pipeline.typeclasses.HNilFiller._
 
 object Main {
   def main(args: Array[String]): Unit = {

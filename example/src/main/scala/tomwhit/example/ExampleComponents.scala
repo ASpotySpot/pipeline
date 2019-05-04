@@ -57,7 +57,7 @@ object ExampleComponents {
 
   trait MetricComponent[F[_], I, O] extends Component[F, I, O] {
     protected def id: String
-    protected def pushMetric(name: String, l: Long): Unit = println(s"Pushing Value ($l, $name) for $id")
+    protected def pushMetric(name: String, l: Long): Unit = {} //println(s"Pushing Value ($l, $name) for $id")
     override protected def before: F[Unit] = F.pure(pushMetric("start_time", System.currentTimeMillis())) >> super.before
     override protected def after: F[Unit] = F.pure(pushMetric("end_time", System.currentTimeMillis())) >> super.after
   }
